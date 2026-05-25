@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generator
+  namespace: sensor-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: generator
+  template:
+    metadata:
+      labels:
+        app: generator
+    spec:
+      containers:
+      - name: generator
+        image: sensor-pipeline/generator:latest
+        imagePullPolicy: Never   # image is built into minikube's daemon
+        env:
+        - name: RATE
+          value: "2"
+        - name: SIZE
+          value: "small"
+        - name: SOURCES
+          value: "10"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        volumeMounts:
+        - name: input
+          mountPath: /input
+      volumes:
+      - name: input
+        persistentVolumeClaim:
+          claimName: input-pvc
