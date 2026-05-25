@@ -10,7 +10,7 @@ You are joining a data engineering team that ingests sensor telemetry from a fle
 
 You are free to choose your own tools. What matters is how you design and orchestrate the pipeline.
 
-A data generator script is provided (`generator.py`). It continuously drops JSON sensor files into a local directory at a configurable rate. You do not need to build the data source — just plug your pipeline into whatever the generator produces.
+A data generator is provided. It runs as a Kubernetes Deployment inside the cluster and continuously drops JSON sensor files onto a shared PVC (`input-pvc`) at a configurable rate. You do not need to build the data source — just plug your pipeline into whatever lands at `/input` on that PVC.
 
 ---
 
