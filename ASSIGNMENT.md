@@ -14,6 +14,49 @@ A data generator is provided. It runs as a Kubernetes Deployment inside the clus
 
 ---
 
+## Prerequisites
+
+| Tool | Version | Install |
+|---|---|---|
+| Docker | 24+ | https://docs.docker.com/get-docker/ |
+| kubectl | 1.28+ | https://kubernetes.io/docs/tasks/tools/ |
+| minikube | 1.32+ | https://minikube.sigs.k8s.io/docs/start/ |
+| Python | 3.10+ | https://python.org |
+
+---
+
+## Quick Start
+
+```bash
+# Clone the repo
+git clone <repo-url>
+cd <repo-name>
+
+# Bootstrap the cluster (takes ~5 minutes)
+chmod +x bootstrap.sh
+./bootstrap.sh
+```
+
+This will:
+1. Start minikube with 4 GB RAM and 4 CPUs
+2. Install KEDA
+3. Create the `sensor-pipeline` namespace and `input-pvc`
+4. Build the generator Docker image and deploy it
+
+Verify everything is running:
+
+```bash
+kubectl get pods -n sensor-pipeline
+# NAME                         READY   STATUS    RESTARTS   AGE
+# generator-xxxx-xxxx          1/1     Running   0          30s
+
+kubectl logs deploy/generator -n sensor-pipeline
+# [10:14:02] #0001  ship-03_gps_20260523T101400Z.json  (15 KB | 100 rows | 0.01s)
+# [10:14:32] #0002  ship-07_gps_20260523T101432Z.json  (15 KB | 100 rows | 0.01s)
+```
+
+---
+
 ## Requirements
 
 | Requirement | Detail                                                                                                                                                    |
