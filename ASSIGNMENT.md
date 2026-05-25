@@ -14,6 +14,41 @@ A data generator is provided. It runs as a Kubernetes Deployment inside the clus
 
 ---
 
+## What you need to do
+
+Create an ingestion date pipeline using Kubernetes and KEDA that ingests JSON files with sensor information and transforms the data into an efficient columnar format. 
+
+**You decide:**
+- How many stages the pipeline has and where the stage boundaries are
+- Which message queue or trigger mechanism to use (RabbitMQ, Redis Streams, Kafka, Redpanda, Apache Pulsar etc.)
+- How to handle chunking, batching, and file sizing for your chosen data store
+
+**The most critical aspect is managing multiprocessing and autoscaling with KEDA to ensure efficient Kubernetes resource utilization while guaranteeing that no data is lost.**
+
+---
+
+## Requirements
+
+| Requirement | Detail                                                                                                                                                    |
+|---|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Latency** | Up to 10–15 minutes from JSON file landing to data queryable in the target store.                                                                         |
+| **Scale** | The solution should be scalable, supporting multiple ship dumps and enabling parallel processing.                                                         |
+| **Volume** | File sizes vary significantly and are unpredictable, need to support small and large file sizes. Files are not evenly distributed across time or sources. |
+| **Data completeness** | The output should include all the data from the source                                                                                                    |
+| **Resource efficiency** | Compute resources are limited. The pipeline must make efficient use of CPU and memory                                                                     |
+| **Concurrency** | Need to handle concurrent processing of multiple data sources simultaneously.                                                                             |
+
+### More instructions
+
+- The pipeline needs to run on **Kubernetes**
+- Use **KEDA** for autoscaling
+- Use **free and open-source** tools — no paid cloud services
+- Local execution via **minikube** or **kind** is acceptable
+- **Treat this as a production workflow.** The pipeline must be robust and stable. It is expected to think about scenarios that could break the pipeline and handle them in the code. Document the scenarios you chose to address in the README and justify your choices.
+- The output should be stored in queriable format
+
+---
+
 ## Prerequisites
 
 | Tool | Version | Install |
@@ -57,27 +92,6 @@ kubectl logs deploy/generator -n sensor-pipeline
 
 ---
 
-## Requirements
-
-| Requirement | Detail                                                                                                                                                    |
-|---|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Latency** | Up to 10–15 minutes from JSON file landing to data queryable in the target store.                                                                         |
-| **Scale** | The solution should be scalable, supporting multiple ship dumps and enabling parallel processing.                                                         |
-| **Volume** | File sizes vary significantly and are unpredictable, need to support small and large file sizes. Files are not evenly distributed across time or sources. |
-| **Data completeness** | The output should include all the data from the source                                                                                                    |
-| **Resource efficiency** | Compute resources are limited. The pipeline must make efficient use of CPU and memory                                                                     |
-| **Concurrency** | Need to handle concurrent processing of multiple data sources simultaneously.                                                                             |
-
-### More instructions
-
-- The pipeline needs to run on **Kubernetes**
-- Use **KEDA** for autoscaling
-- Use **free and open-source** tools — no paid cloud services
-- Local execution via **minikube** or **kind** is acceptable
-- **Treat this as a production workflow.** The pipeline must be robust and stable. It is expected to think about scenarios that could break the pipeline and handle them in the code. Document the scenarios you chose to address in the README and justify your choices.
-- The output should be stored in queriable format
-
----
 
 ## Input Data
 
@@ -183,19 +197,6 @@ Status: FAIL — 1 source(s) have mismatched file counts
 ```
 
 > You can also run `verify.py` inside the cluster via `kubectl exec` if you prefer not to copy files locally.
-
----
-
-## What you need to do
-
-Create an ingestion date pipeline using Kubernetes and KEDA that ingests JSON files with sensor information and transforms the data into an efficient columnar format. 
-
-**You decide:**
-- How many stages the pipeline has and where the stage boundaries are
-- Which message queue or trigger mechanism to use (RabbitMQ, Redis Streams, Kafka, Redpanda, Apache Pulsar etc.)
-- How to handle chunking, batching, and file sizing for your chosen data store
-
-**The most critical aspect is managing multiprocessing and autoscaling with KEDA to ensure efficient Kubernetes resource utilization while guaranteeing that no data is lost.**
 
 ---
 
