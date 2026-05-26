@@ -162,21 +162,39 @@ kubectl apply -f generator/k8s/deployment.yaml
 
 ## Verifying Data Completeness
 
-`verify.py` counts input files vs output files per source and reports PASS/FAIL.
+`verify.py` counts `.json` files per source in `--input-dir` and all files per source in `--output-dir`, then reports a per-source PASS/FAIL.
 
-**Step 1 — Copy files from the cluster to local directories:**
+**How the pipeline works with verify.py:**
+- The Processor moves processed `.json` files from `/input/` to `/input/done/` (not deleted) — so they remain countable
+- Output Parquet files are written flat to `/output/` on `output-pvc`
+- Run verify.py **after the pipeline has finished processing** all files (no pending messages in Redis)
+
+**Step 1 — Stop the generator (so no new files arrive mid-check):**
 
 ```bash
-# Input files (from the generator pod)
-GENERATOR_POD=$(kubectl get pod -n sensor-pipeline -l app=generator -o jsonpath='{.items[0].metadata.name}')
-kubectl cp sensor-pipeline/${GENERATOR_POD}:/input /tmp/input
-
-# Output files (adjust pod label and path to match your pipeline)
-YOUR_POD=$(kubectl get pod -n sensor-pipeline -l app=<your-app> -o jsonpath='{.items[0].metadata.name}')
-kubectl cp sensor-pipeline/${YOUR_POD}:/output /tmp/output
+kubectl scale deployment generator -n sensor-pipeline --replicas=0
 ```
 
-**Step 2 — Run the check:**
+**Step 2 — Wait for the pipeline to drain (all pending files processed):**
+
+```bash
+# Watch until no processor pods are running (scaled to zero by KEDA)
+kubectl get pods -n sensor-pipeline -w
+```
+
+**Step 3 — Copy files from the cluster to local directories:**
+
+```bash
+# Processed input files (moved here by the processor after successful conversion)
+GENERATOR_POD=$(kubectl get pod -n sensor-pipeline -l app=generator -o jsonpath='{.items[0].metadata.name}')
+kubectl cp sensor-pipeline/${GENERATOR_POD}:/input/done /tmp/input
+
+# Output Parquet files
+PROCESSOR_POD=$(kubectl get pod -n sensor-pipeline -l app=processor -o jsonpath='{.items[0].metadata.name}')
+kubectl cp sensor-pipeline/${PROCESSOR_POD}:/output /tmp/output
+```
+
+**Step 4 — Run the check:**
 
 ```bash
 python verify.py --input-dir /tmp/input --output-dir /tmp/output
@@ -189,14 +207,20 @@ Source           Input   Output   Status
 ---------------------------------------------
 ship-01              8        8       OK
 ship-02              6        6       OK
-ship-03             10        9 MISMATCH
+ship-03             10       10       OK
 ---------------------------------------------
-TOTAL               24       23
+TOTAL               24       24
 
-Status: FAIL — 1 source(s) have mismatched file counts
+Status: PASS
 ```
 
-> You can also run `verify.py` inside the cluster via `kubectl exec` if you prefer not to copy files locally.
+> **Note:** `verify.py` counts ALL files in `--output-dir` regardless of extension. Ensure no `.parquet.tmp` files remain in `/output/` before running — the pipeline cleans these up automatically on startup and on graceful shutdown.
+
+> You can also run `verify.py` inside the cluster directly:
+> ```bash
+> kubectl exec -n sensor-pipeline ${PROCESSOR_POD} -- \
+>   python /app/verify.py --input-dir /input/done --output-dir /output
+> ```
 
 ---
 
